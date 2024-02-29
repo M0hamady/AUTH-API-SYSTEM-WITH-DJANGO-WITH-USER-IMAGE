@@ -1,14 +1,12 @@
-# Project Name
+AUTH API SYSTEM WITH DJANGO WITH USER IMAGE
 
-Short project description.
 
 ## Table of Contents
 
-- [Project Name](#project-name)
-  - [Table of Contents](#table-of-contents)
-  - [Project Description](#project-description)
-  - [Features](#features)
-  - [Installation](#installation)
+- [Table of Contents](#table-of-contents)
+- [Project Description](#project-description)
+- [Features](#features)
+- [Installation](#installation)
 
 ## Project Description
 
