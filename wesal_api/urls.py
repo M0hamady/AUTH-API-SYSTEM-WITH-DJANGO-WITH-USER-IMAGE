@@ -33,6 +33,6 @@ urlpatterns = [
     path('api/register/user/', user_registration_view, name='user_registration'),
     path('api/logout/', LogoutView.as_view(), name='logout'),
     path('api/user-file/', UserFileView.as_view(), name='user-file'),
-    path('api/login', CustomLoginView.as_view(), name='login'),
+    path('api/login/', CustomLoginView.as_view(), name='login'),
     path('', include(router.urls)),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

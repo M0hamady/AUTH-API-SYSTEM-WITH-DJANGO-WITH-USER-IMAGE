@@ -1,3 +1,4 @@
+import json
 from django.contrib.auth import logout
 # Create your views here.
 from django.http import JsonResponse
@@ -37,14 +38,22 @@ class CustomLoginView(View):
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request):
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            username = data.get('username')
+            password = data.get('password')
+
+            # Process the data as needed
+        except:
+            username = request.POST.get('username')
+            password = request.POST.get('password')
 
         user = authenticate(username=username, password=password)
 
         if user is not None:
             login(request, user)
             token = jwt_encode_handler(jwt_payload_handler(user))
+            print('loge in ')
             return JsonResponse({'message': 'Login successful', 'token': token})
         else:
             return JsonResponse({'message': 'Invalid username or password'}, status=401)
