@@ -1,5 +1,6 @@
 from django.contrib.auth import logout
 # Create your views here.
+from django.http import JsonResponse
 from rest_framework.exceptions import AuthenticationFailed
 
 from rest_framework import viewsets
@@ -14,6 +15,40 @@ from .serializers import UserRegistrationSerializer
 from rest_framework.views import APIView
 from rest_framework_jwt.views import ObtainJSONWebToken
 from rest_framework_jwt.utils import jwt_decode_handler
+from django.contrib.auth import authenticate, login
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from rest_framework_jwt.utils import jwt_encode_handler, jwt_decode_handler
+from datetime import datetime
+from django.conf import settings
+
+
+def jwt_payload_handler(user):
+    return {
+        'user_id': user.id,
+        'email': user.email,
+        'exp': datetime.utcnow() + settings.JWT_EXPIRATION_DELTA
+    }
+
+class CustomLoginView(View):
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request):
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(username=username, password=password)
+
+        if user is not None:
+            login(request, user)
+            token = jwt_encode_handler(jwt_payload_handler(user))
+            return JsonResponse({'message': 'Login successful', 'token': token})
+        else:
+            return JsonResponse({'message': 'Invalid username or password'}, status=401)
+        
 
 @api_view(['POST'])
 def user_registration_view(request):
@@ -25,11 +60,22 @@ def user_registration_view(request):
 
 class CustomObtainTokenView(ObtainJSONWebToken):
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        token = response.data['token']
+        token = request.headers.get('Authorization', '').split(' ')[1]
+        
+        if not token:
+            return Response({"authenticated": False, "message": "Token not provided"}, status=status.HTTP_404_NOT_FOUND)
+
         decoded_token = jwt_decode_handler(token)
-        user_id = decoded_token['user_id']
-        user = User.objects.get(pk=user_id)
+        user_id = decoded_token.get('user_id')
+
+        if not user_id:
+            return Response({"authenticated": False, "message": "Token not provided"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({"authenticated": False, "message": "Token not provided"}, status=status.HTTP_404_NOT_FOUND)
+
         return Response({'token': token, 'username': user.username})
     
     
@@ -47,6 +93,29 @@ class LogoutView(APIView):
         else:
             return Response({'detail': 'Token not provided'}, status=400)
 
+
+class RefreshTokenView(ObtainJSONWebToken):
+    def post(self, request, *args, **kwargs):
+        token = request.headers.get('Authorization', '').split(' ')[1]
+
+        if not token:
+            return Response({"authenticated": False, "message": "Token not provided"}, status=status.HTTP_404_NOT_FOUND)
+
+        decoded_token = jwt_decode_handler(token)
+        user_id = decoded_token.get('user_id')
+
+        if not user_id:
+            return Response({"authenticated": False, "message": "Invalid token"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({"authenticated": False, "message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Generate a new token
+        new_token = jwt_encode_handler(jwt_payload_handler(user))
+        
+        return Response({'token': new_token, 'username': user.username})
 
 
 class VerifyTokenView(APIView):
