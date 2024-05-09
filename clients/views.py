@@ -54,7 +54,7 @@ class CustomLoginView(View):
             login(request, user)
             token = jwt_encode_handler(jwt_payload_handler(user))
             print('loge in ')
-            return JsonResponse({'message': 'Login successful', 'token': token})
+            return JsonResponse({'message': 'Login successful', 'token': token, 'username':username})
         else:
             return JsonResponse({'message': 'Invalid username or password'}, status=401)
         
